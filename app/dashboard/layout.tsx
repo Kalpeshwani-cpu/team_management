@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import DashboardNav from '@/components/dashboard/nav'
 import { getCurrentUser } from '@/lib/auth'
+import { REQUIRE_ADMIN_APPROVAL } from '@/lib/approval-config'
 
 export default async function DashboardLayout({
   children,
@@ -19,7 +20,12 @@ export default async function DashboardLayout({
   const isDeveloper = user.roles?.some((ur: any) => ur.role?.name === 'developer') || user.requestedRole === 'developer'
 
   // If user is not approved and not admin/developer, redirect to pending approval page
-  if (user.approvalStatus !== 'approved' && !isAdmin && !isDeveloper) {
+  if (
+    REQUIRE_ADMIN_APPROVAL &&
+    user.approvalStatus !== 'approved' &&
+    !isAdmin &&
+    !isDeveloper
+  ) {
     redirect('/pending-approval')
   }
 

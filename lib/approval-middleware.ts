@@ -1,4 +1,5 @@
 import prisma from '@/lib/prisma'
+import { REQUIRE_ADMIN_APPROVAL } from '@/lib/approval-config'
 
 export async function checkUserApprovalStatus(userId: string) {
   try {
@@ -29,6 +30,10 @@ export function shouldRedirectToPendingApproval(
   pathname: string,
   approvalStatus: string
 ): boolean {
+  if (!REQUIRE_ADMIN_APPROVAL) {
+    return false
+  }
+
   // Pages that don't require approval
   const publicPaths = [
     '/auth',

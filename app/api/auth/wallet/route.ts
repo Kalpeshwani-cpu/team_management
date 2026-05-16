@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { verifyMessage, toChecksumAddress } from '@/lib/web3-utils'
+import { REQUIRE_ADMIN_APPROVAL } from '@/lib/approval-config'
 
 export async function GET(request: NextRequest) {
   try {
@@ -22,7 +23,8 @@ export async function GET(request: NextRequest) {
         data: {
           walletAddress: checksumAddress,
           email: `wallet-${checksumAddress.toLowerCase()}@team-management.local`,
-          approvalStatus: 'pending',
+          approvalStatus: REQUIRE_ADMIN_APPROVAL ? 'pending' : 'approved',
+          ...(REQUIRE_ADMIN_APPROVAL ? {} : { approvedAt: new Date() }),
         },
         select: { id: true }
       })

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import bcrypt from "bcryptjs"
+import { REQUIRE_ADMIN_APPROVAL } from "@/lib/approval-config"
 
 
 export async function POST(request: Request) {
@@ -25,8 +26,8 @@ export async function POST(request: Request) {
       )
     }
 
-    const isDeveloper = requested_role === 'developer'
-    const status = isDeveloper ? 'approved' : 'pending'
+    const roleName = requested_role || 'developer'
+    const status = REQUIRE_ADMIN_APPROVAL && roleName !== 'developer' ? 'pending' : 'approved'
 
     const hashedPassword = await bcrypt.hash(password, 10)
 
@@ -34,30 +35,30 @@ export async function POST(request: Request) {
       data: {
         email,
         password: hashedPassword,
-        requestedRole: requested_role,
+        requestedRole: roleName,
         approvalStatus: status,
+        ...(status === 'approved' ? { approvedAt: new Date() } : {}),
       },
     })
 
-    // Create a role request
     await prisma.roleRequest.create({
       data: {
         userId: user.id,
-        requestedRole: requested_role,
+        requestedRole: roleName,
         reasonForRequest: "Initial sign-up request",
-        status: isDeveloper ? 'approved' : 'pending',
+        status: status === 'approved' ? 'approved' : 'pending',
+        ...(status === 'approved' ? { reviewedAt: new Date() } : {}),
       },
     })
 
-    // If developer, also assign the role immediately
-    if (isDeveloper) {
-      const role = await prisma.role.findUnique({ where: { name: 'developer' } })
+    if (status === 'approved') {
+      const role = await prisma.role.findUnique({ where: { name: roleName } })
       if (role) {
         await prisma.userRole.create({
           data: {
             userId: user.id,
-            roleId: role.id
-          }
+            roleId: role.id,
+          },
         })
       }
     }

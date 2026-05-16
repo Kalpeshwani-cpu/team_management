@@ -40,15 +40,7 @@ function LoginContent() {
       if (result?.error) {
         setError("Invalid email or password")
       } else if (result?.ok) {
-        // Fetch the session to check approval status
-        const sessionRes = await fetch('/api/auth/session')
-        const session = await sessionRes.json()
-        
-        if (session?.user?.approvalStatus === 'approved') {
-          router.push('/dashboard')
-        } else {
-          router.push('/pending-approval')
-        }
+        router.push('/dashboard')
       }
     } catch (error: any) {
       setError('An error occurred during login')
@@ -96,7 +88,7 @@ function LoginContent() {
               <div className="flex flex-col gap-6">
                 {message === 'check-email' && (
                   <p className="text-sm text-green-600 bg-green-50 border border-green-200 rounded p-3">
-                    Account created. Your access will be available after admin approval.
+                    Account created. You can log in now.
                   </p>
                 )}
                 

@@ -2,6 +2,7 @@ import { NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import prisma from "./prisma"
 import bcrypt from "bcryptjs"
+import { ensureUserApproved } from "./auto-approve-user"
 
 export const authOptions: NextAuthOptions = {
   // NOTE: PrismaAdapter is intentionally removed.
@@ -43,11 +44,18 @@ export const authOptions: NextAuthOptions = {
           return null
         }
 
+        await ensureUserApproved(user.id)
+
+        const updatedUser = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: { approvalStatus: true },
+        })
+
         return {
           id: user.id,
           email: user.email,
           name: user.name,
-          approvalStatus: user.approvalStatus,
+          approvalStatus: updatedUser?.approvalStatus ?? 'approved',
         }
       },
     }),
@@ -108,11 +116,18 @@ export const authOptions: NextAuthOptions = {
           data: { used: true }
         })
 
+        await ensureUserApproved(user.id)
+
+        const updatedUser = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: { approvalStatus: true },
+        })
+
         return {
           id: user.id,
           email: user.email,
           name: user.name || checksumAddress,
-          approvalStatus: user.approvalStatus,
+          approvalStatus: updatedUser?.approvalStatus ?? 'approved',
         }
       }
     }),

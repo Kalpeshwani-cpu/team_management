@@ -31,11 +31,10 @@ export default function PendingApprovalPage() {
       if (sessionStatus !== 'authenticated') return
 
       try {
-        // Fetch user status and role request from our new API
         const response = await fetch('/api/user/status')
         const data = await response.json()
 
-        if (data.approvalStatus === 'approved') {
+        if (!data.requireAdminApproval || data.approvalStatus === 'approved') {
           router.push('/dashboard')
           return
         }

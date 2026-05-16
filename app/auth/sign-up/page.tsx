@@ -126,7 +126,7 @@ export default function Page() {
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground">
-                      Your role selection will be reviewed and approved by an administrator.
+                      Your selected role will be applied when you sign up.
                     </p>
                   </div>
                   {error && <p className="text-sm text-red-500">{error}</p>}

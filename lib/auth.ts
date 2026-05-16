@@ -4,6 +4,7 @@ import { signIn as nextAuthSignIn, signOut as nextAuthSignOut } from "next-auth/
 import prisma from "./prisma"
 import bcrypt from "bcryptjs"
 import { cache } from "react"
+import { REQUIRE_ADMIN_APPROVAL } from "./approval-config"
 
 // Server-side authentication functions
 export const getCurrentUser = cache(async () => {
@@ -104,7 +105,8 @@ export async function signUp(email: string, password: string, firstName?: string
       firstName,
       lastName,
       name: firstName && lastName ? `${firstName} ${lastName}` : firstName || lastName || null,
-      approvalStatus: "pending",
+      approvalStatus: REQUIRE_ADMIN_APPROVAL ? "pending" : "approved",
+      ...(REQUIRE_ADMIN_APPROVAL ? {} : { approvedAt: new Date() }),
       isActive: true,
     }
   })

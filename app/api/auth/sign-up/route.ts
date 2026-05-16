@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       {
-        message: 'Sign up successful. Your account is pending admin approval.',
+        message: 'Sign up successful. You can log in now.',
         user: data.user,
       },
       { status: 201 }
