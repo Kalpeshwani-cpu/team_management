@@ -39,8 +39,16 @@ function LoginContent() {
 
       if (result?.error) {
         setError("Invalid email or password")
-      } else {
-        router.push('/dashboard')
+      } else if (result?.ok) {
+        // Fetch the session to check approval status
+        const sessionRes = await fetch('/api/auth/session')
+        const session = await sessionRes.json()
+        
+        if (session?.user?.approvalStatus === 'approved') {
+          router.push('/dashboard')
+        } else {
+          router.push('/pending-approval')
+        }
       }
     } catch (error: any) {
       setError('An error occurred during login')

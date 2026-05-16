@@ -1,11 +1,12 @@
-import { PrismaAdapter } from "@auth/prisma-adapter"
 import { NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import prisma from "./prisma"
 import bcrypt from "bcryptjs"
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
+  // NOTE: PrismaAdapter is intentionally removed.
+  // It conflicts with CredentialsProvider when using JWT sessions,
+  // causing session creation to silently fail and redirect loops.
   session: {
     strategy: "jwt",
   },
@@ -46,6 +47,7 @@ export const authOptions: NextAuthOptions = {
           id: user.id,
           email: user.email,
           name: user.name,
+          approvalStatus: user.approvalStatus,
         }
       },
     }),
@@ -110,22 +112,25 @@ export const authOptions: NextAuthOptions = {
           id: user.id,
           email: user.email,
           name: user.name || checksumAddress,
+          approvalStatus: user.approvalStatus,
         }
       }
     }),
   ],
   callbacks: {
-    async session({ session, token }) {
-      if (token && session.user) {
-        session.user.id = token.id as string
-      }
-      return session
-    },
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id
+        token.approvalStatus = (user as any).approvalStatus
       }
       return token
+    },
+    async session({ session, token }) {
+      if (token && session.user) {
+        session.user.id = token.id as string
+        ;(session.user as any).approvalStatus = token.approvalStatus
+      }
+      return session
     },
   },
 }
