@@ -48,6 +48,7 @@ export const authOptions: NextAuthOptions = {
           name: user.name,
         }
       },
+    }),
     CredentialsProvider({
       id: "wallet",
       name: "Wallet",
