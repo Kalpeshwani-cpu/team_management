@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import bcrypt from "bcryptjs"
 import { REQUIRE_ADMIN_APPROVAL } from "@/lib/approval-config"
+import { isSystemRole } from "@/lib/roles"
 
 
 export async function POST(request: Request) {
@@ -15,8 +16,16 @@ export async function POST(request: Request) {
       )
     }
 
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
+    const normalizedEmail = String(email).trim().toLowerCase()
+    const roleName = isSystemRole(requested_role) ? requested_role : 'developer'
+
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        email: {
+          equals: normalizedEmail,
+          mode: 'insensitive',
+        },
+      },
     })
 
     if (existingUser) {
@@ -26,17 +35,17 @@ export async function POST(request: Request) {
       )
     }
 
-    const roleName = requested_role || 'developer'
     const status = REQUIRE_ADMIN_APPROVAL && roleName !== 'developer' ? 'pending' : 'approved'
 
     const hashedPassword = await bcrypt.hash(password, 10)
 
     const user = await prisma.user.create({
       data: {
-        email,
+        email: normalizedEmail,
         password: hashedPassword,
         requestedRole: roleName,
         approvalStatus: status,
+        isActive: true,
         ...(status === 'approved' ? { approvedAt: new Date() } : {}),
       },
     })

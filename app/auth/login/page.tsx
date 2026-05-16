@@ -32,15 +32,19 @@ function LoginContent() {
 
     try {
       const result = await signIn('credentials', {
-        email,
+        email: email.trim().toLowerCase(),
         password,
+        callbackUrl: '/dashboard',
         redirect: false,
       })
 
       if (result?.error) {
         setError("Invalid email or password")
       } else if (result?.ok) {
-        router.push('/dashboard')
+        router.replace(result.url || '/dashboard')
+        router.refresh()
+      } else {
+        setError('Login did not complete. Please try again.')
       }
     } catch (error: any) {
       setError('An error occurred during login')
