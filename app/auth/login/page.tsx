@@ -41,8 +41,8 @@ function LoginContent() {
       if (result?.error) {
         setError("Invalid email or password")
       } else if (result?.ok) {
-        router.replace(result.url || '/dashboard')
         router.refresh()
+        router.replace('/dashboard')
       } else {
         setError('Login did not complete. Please try again.')
       }
