@@ -1,6 +1,13 @@
 import { getCurrentUser } from '@/lib/auth'
 import { getProjects, createProject, logActivity } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
+
+const projectSchema = z.object({
+  name: z.string().min(1, 'Project name is required').max(100, 'Name too long'),
+  description: z.string().optional(),
+  departmentId: z.string().optional(),
+})
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,6 +23,7 @@ export async function GET(request: NextRequest) {
     const projects = await getProjects(currentUser.id)
     return NextResponse.json(projects)
   } catch (error: any) {
+    console.error('[PROJECTS_GET]', error)
     return NextResponse.json(
       { error: error.message || 'Failed to fetch projects' },
       { status: 500 }
@@ -34,14 +42,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { name, description, departmentId } = await request.json()
+    const body = await request.json()
+    const validation = projectSchema.safeParse(body)
 
-    if (!name) {
+    if (!validation.success) {
       return NextResponse.json(
-        { error: 'Project name is required' },
+        { 
+          error: 'Validation failed', 
+          details: validation.error.flatten().fieldErrors 
+        },
         { status: 400 }
       )
     }
+
+    const { name, description, departmentId } = validation.data
 
     const project = await createProject(
       name,
@@ -61,6 +75,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(project, { status: 201 })
   } catch (error: any) {
+    console.error('[PROJECTS_POST]', error)
     return NextResponse.json(
       { error: error.message || 'Failed to create project' },
       { status: 500 }

@@ -34,7 +34,7 @@ export async function checkRBAC(
   if (requiredRoles && requiredRoles.length > 0) {
     let hasRequiredRole = false
     for (const role of requiredRoles) {
-      if (await hasRole(currentUser.id, role)) {
+      if (await hasRole(currentUser.id, role, currentUser)) {
         hasRequiredRole = true
         break
       }
@@ -53,7 +53,7 @@ export async function checkRBAC(
   if (requiredPermissions && requiredPermissions.length > 0) {
     let hasRequiredPermission = false
     for (const permission of requiredPermissions) {
-      if (await hasPermission(currentUser.id, permission)) {
+      if (await hasPermission(currentUser.id, permission, currentUser)) {
         hasRequiredPermission = true
         break
       }

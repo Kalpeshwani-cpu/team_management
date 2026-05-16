@@ -3,9 +3,10 @@ import { authOptions } from "./auth-options"
 import { signIn as nextAuthSignIn, signOut as nextAuthSignOut } from "next-auth/react"
 import prisma from "./prisma"
 import bcrypt from "bcryptjs"
+import { cache } from "react"
 
 // Server-side authentication functions
-export async function getCurrentUser() {
+export const getCurrentUser = cache(async () => {
   const session = await getServerSession(authOptions)
 
   if (!session?.user?.email) {
@@ -29,7 +30,7 @@ export async function getCurrentUser() {
   }
 
   return user
-}
+})
 
 export async function isAuthenticated() {
   const session = await getServerSession(authOptions)
@@ -50,15 +51,24 @@ export async function getUserRoles(userId: string) {
   }))
 }
 
-export async function hasRole(userId: string, roleName: string) {
+export async function hasRole(userId: string, roleName: string, user?: any) {
+  if (user?.roles) {
+    return user.roles.some((ur: any) => ur.role.name === roleName)
+  }
   const roles = await getUserRoles(userId)
   return roles.some((r: any) => r.roles?.name === roleName)
 }
 
 export async function hasPermission(
   userId: string,
-  permission: string
+  permission: string,
+  user?: any
 ) {
+  if (user?.roles) {
+    return user.roles.some((ur: any) =>
+      ur.role.permissions?.includes(permission)
+    )
+  }
   const roles = await getUserRoles(userId)
   return roles.some((r: any) =>
     r.roles?.permissions?.includes(permission)
