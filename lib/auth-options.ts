@@ -165,6 +165,8 @@ export const authOptions: NextAuthOptions = {
           select: { requestedRole: true, approvalStatus: true },
         })
         token.id = user.id
+        token.email = user.email
+        token.name = user.name
         token.approvalStatus = dbUser?.approvalStatus ?? user.approvalStatus
         token.roles = roles
         token.primaryRole = getPrimaryRole(roles, dbUser?.requestedRole)
@@ -185,6 +187,8 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (token && session.user) {
         session.user.id = token.id as string
+        session.user.email = token.email
+        session.user.name = token.name
         session.user.approvalStatus = token.approvalStatus as string
         session.user.roles = (token.roles as string[]) ?? []
         session.user.primaryRole = token.primaryRole

@@ -15,12 +15,19 @@ import {
 export const getCurrentUser = cache(async () => {
   const session = await getServerSession(authOptions)
 
-  if (!session?.user?.email) {
+  if (!session?.user) {
+    return null
+  }
+
+  const userId = session.user.id
+  const email = session.user.email
+
+  if (!userId && !email) {
     return null
   }
 
   const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
+    where: userId ? { id: userId } : { email: email as string },
     include: {
       roles: {
         include: {
