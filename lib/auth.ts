@@ -5,6 +5,11 @@ import prisma from "./prisma"
 import bcrypt from "bcryptjs"
 import { cache } from "react"
 import { REQUIRE_ADMIN_APPROVAL } from "./approval-config"
+import {
+  getPrimaryRole,
+  getUserRoleNames,
+  type SystemRole,
+} from "./roles"
 
 // Server-side authentication functions
 export const getCurrentUser = cache(async () => {
@@ -85,6 +90,13 @@ export const signInClient = async (email: string) => {
 
 export const signOutClient = async () => {
   return await nextAuthSignOut({ callbackUrl: "/" })
+}
+
+export function resolvePrimaryRole(user: {
+  roles?: { role: { name: string } }[]
+  requestedRole?: string | null
+}): SystemRole {
+  return getPrimaryRole(getUserRoleNames(user), user.requestedRole)
 }
 
 export async function signUp(email: string, password: string, firstName?: string, lastName?: string) {

@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 
 export default function TasksList({ tasks }: { tasks: any[] }) {
@@ -38,9 +39,10 @@ export default function TasksList({ tasks }: { tasks: any[] }) {
   return (
     <div className="space-y-3">
       {tasks.map((task: any) => (
-        <div
+        <Link
           key={task.id}
-          className="p-4 bg-card border border-border rounded-lg hover:border-primary transition-colors"
+          href={`/dashboard/tasks/${task.id}`}
+          className="block p-4 bg-card border border-border rounded-lg hover:border-primary transition-colors"
         >
           <div className="flex justify-between items-start mb-2">
             <h3 className="font-semibold">{task.title}</h3>
@@ -58,11 +60,11 @@ export default function TasksList({ tasks }: { tasks: any[] }) {
           </p>
           <div className="flex justify-between items-center text-xs text-muted-foreground">
             <span>{task.project?.name}</span>
-            {task.due_date && (
-              <span>Due: {new Date(task.due_date).toLocaleDateString()}</span>
+            {task.dueDate && (
+              <span>Due: {new Date(task.dueDate).toLocaleDateString()}</span>
             )}
           </div>
-        </div>
+        </Link>
       ))}
     </div>
   )

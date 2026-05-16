@@ -257,6 +257,7 @@ model RoleRequest {
   userId            String
   requestedRole     String
   reasonForRequest  String?
+  rejectionReason   String?   @map("rejection_reason")
   status            String    @default("pending")
   reviewedBy        String?
   reviewedAt        DateTime?

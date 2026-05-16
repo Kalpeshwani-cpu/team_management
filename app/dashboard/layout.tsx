@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
-import DashboardNav from '@/components/dashboard/nav'
-import { getCurrentUser } from '@/lib/auth'
+import RoleNav from '@/components/dashboard/role-nav'
+import { getCurrentUser, resolvePrimaryRole } from '@/lib/auth'
 import { REQUIRE_ADMIN_APPROVAL } from '@/lib/approval-config'
 
 export default async function DashboardLayout({
@@ -29,9 +29,11 @@ export default async function DashboardLayout({
     redirect('/pending-approval')
   }
 
+  const primaryRole = resolvePrimaryRole(user)
+
   return (
     <div className="flex h-screen">
-      <DashboardNav />
+      <RoleNav primaryRole={primaryRole} />
       <main className="flex-1 overflow-auto bg-background">
         {children}
       </main>

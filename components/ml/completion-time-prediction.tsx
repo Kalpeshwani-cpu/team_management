@@ -18,7 +18,10 @@ export function CompletionTimePrediction({
   userSpeedMultiplier,
 }: CompletionTimePredictionProps) {
   const difference = estimatedHours - originalEstimate
-  const percentDifference = ((difference / originalEstimate) * 100).toFixed(0)
+  const percentDifference =
+    originalEstimate > 0
+      ? Math.round((difference / originalEstimate) * 100)
+      : 0
   const isAccelerated = userSpeedMultiplier < 1
 
   return (

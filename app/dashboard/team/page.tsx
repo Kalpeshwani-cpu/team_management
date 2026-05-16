@@ -1,15 +1,10 @@
-import { getCurrentUser } from '@/lib/auth'
 import { getDepartments } from '@/lib/db'
+import { requireManagerOrAdmin } from '@/lib/require-role'
 import DepartmentsList from '@/components/team/departments-list'
 import CreateDepartmentDialog from '@/components/team/create-department-dialog'
 
 export default async function TeamPage() {
-  const currentUser = await getCurrentUser()
-
-  if (!currentUser) {
-    return <div className="p-8">Loading...</div>
-  }
-
+  await requireManagerOrAdmin()
   const departments = await getDepartments()
 
   return (

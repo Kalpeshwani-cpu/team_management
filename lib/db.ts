@@ -1,10 +1,9 @@
 import prisma from './prisma'
 
 // Centralized error handling for DB operations
-function handleDbError(error: any, operation: string) {
+function handleDbError(error: unknown, operation: string): never {
   console.error(`[DB_ERROR][${operation}]:`, error)
-  // We could add more sophisticated error handling here (e.g., Prisma error codes)
-  throw error
+  throw error instanceof Error ? error : new Error(String(error))
 }
 
 // User operations
@@ -15,7 +14,7 @@ export async function getUserById(userId: string) {
       include: { department: true }
     })
   } catch (error) {
-    return handleDbError(error, 'getUserById')
+    handleDbError(error, 'getUserById')
   }
 }
 
@@ -28,7 +27,7 @@ export async function getUsersByDepartment(departmentId: string) {
       },
     })
   } catch (error) {
-    return handleDbError(error, 'getUsersByDepartment')
+    handleDbError(error, 'getUsersByDepartment')
   }
 }
 
@@ -39,7 +38,7 @@ export async function updateUser(userId: string, updates: any) {
       data: updates,
     })
   } catch (error) {
-    return handleDbError(error, 'updateUser')
+    handleDbError(error, 'updateUser')
   }
 }
 
@@ -60,7 +59,7 @@ export async function getDepartments() {
       orderBy: { name: 'asc' },
     })
   } catch (error) {
-    return handleDbError(error, 'getDepartments')
+    handleDbError(error, 'getDepartments')
   }
 }
 
@@ -80,7 +79,7 @@ export async function getDepartmentById(deptId: string) {
       },
     })
   } catch (error) {
-    return handleDbError(error, 'getDepartmentById')
+    handleDbError(error, 'getDepartmentById')
   }
 }
 
@@ -90,7 +89,7 @@ export async function createDepartment(name: string, description?: string) {
       data: { name, description },
     })
   } catch (error) {
-    return handleDbError(error, 'createDepartment')
+    handleDbError(error, 'createDepartment')
   }
 }
 
@@ -101,7 +100,7 @@ export async function updateDepartment(deptId: string, updates: any) {
       data: updates,
     })
   } catch (error) {
-    return handleDbError(error, 'updateDepartment')
+    handleDbError(error, 'updateDepartment')
   }
 }
 
@@ -133,7 +132,7 @@ export async function getProjects(userId?: string) {
       orderBy: { createdAt: 'desc' },
     })
   } catch (error) {
-    return handleDbError(error, 'getProjects')
+    handleDbError(error, 'getProjects')
   }
 }
 
@@ -156,7 +155,7 @@ export async function getAllProjects() {
       orderBy: { createdAt: 'desc' },
     })
   } catch (error) {
-    return handleDbError(error, 'getAllProjects')
+    handleDbError(error, 'getAllProjects')
   }
 }
 
@@ -179,7 +178,7 @@ export async function getProjectById(projectId: string) {
       },
     })
   } catch (error) {
-    return handleDbError(error, 'getProjectById')
+    handleDbError(error, 'getProjectById')
   }
 }
 
@@ -199,7 +198,7 @@ export async function createProject(
       },
     })
   } catch (error) {
-    return handleDbError(error, 'createProject')
+    handleDbError(error, 'createProject')
   }
 }
 
@@ -210,7 +209,7 @@ export async function updateProject(projectId: string, updates: any) {
       data: updates,
     })
   } catch (error) {
-    return handleDbError(error, 'updateProject')
+    handleDbError(error, 'updateProject')
   }
 }
 
@@ -236,7 +235,7 @@ export async function getTasks(projectId?: string, userId?: string) {
       orderBy: { createdAt: 'desc' },
     })
   } catch (error) {
-    return handleDbError(error, 'getTasks')
+    handleDbError(error, 'getTasks')
   }
 }
 
@@ -255,7 +254,7 @@ export async function getTaskById(taskId: string) {
       },
     })
   } catch (error) {
-    return handleDbError(error, 'getTaskById')
+    handleDbError(error, 'getTaskById')
   }
 }
 
@@ -279,7 +278,7 @@ export async function createTask(
       },
     })
   } catch (error) {
-    return handleDbError(error, 'createTask')
+    handleDbError(error, 'createTask')
   }
 }
 
@@ -290,7 +289,7 @@ export async function updateTask(taskId: string, updates: any) {
       data: updates,
     })
   } catch (error) {
-    return handleDbError(error, 'updateTask')
+    handleDbError(error, 'updateTask')
   }
 }
 
@@ -301,7 +300,7 @@ export async function getQualifications() {
       orderBy: { name: 'asc' },
     })
   } catch (error) {
-    return handleDbError(error, 'getQualifications')
+    handleDbError(error, 'getQualifications')
   }
 }
 
@@ -315,7 +314,7 @@ export async function createQualification(
       data: { name, description, level },
     })
   } catch (error) {
-    return handleDbError(error, 'createQualification')
+    handleDbError(error, 'createQualification')
   }
 }
 
@@ -350,6 +349,165 @@ export async function getActivityLogs(limit = 100) {
       orderBy: { createdAt: 'desc' },
     })
   } catch (error) {
-    return handleDbError(error, 'getActivityLogs')
+    handleDbError(error, 'getActivityLogs')
+  }
+}
+
+export async function getOwnedProjects(userId: string) {
+  try {
+    return await prisma.project.findMany({
+      where: { ownerId: userId },
+      include: {
+        owner: {
+          select: { id: true, firstName: true, lastName: true, email: true },
+        },
+        department: { select: { id: true, name: true } },
+        teamMembers: {
+          include: {
+            user: {
+              select: { id: true, firstName: true, lastName: true, email: true },
+            },
+          },
+        },
+        tasks: { select: { id: true, status: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    })
+  } catch (error) {
+    handleDbError(error, 'getOwnedProjects')
+  }
+}
+
+export async function getTeamLeadProjects(userId: string) {
+  try {
+    return await prisma.project.findMany({
+      where: {
+        teamMembers: {
+          some: {
+            userId,
+            role: { in: ['team_lead', 'project_lead'] },
+          },
+        },
+      },
+      include: {
+        owner: {
+          select: { id: true, firstName: true, lastName: true, email: true },
+        },
+        department: { select: { id: true, name: true } },
+        teamMembers: {
+          include: {
+            user: {
+              select: { id: true, firstName: true, lastName: true, email: true },
+            },
+          },
+        },
+        tasks: { select: { id: true, status: true, assignedTo: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    })
+  } catch (error) {
+    handleDbError(error, 'getTeamLeadProjects')
+  }
+}
+
+export async function getUnassignedTasks(projectIds?: string[]) {
+  try {
+    return await prisma.task.findMany({
+      where: {
+        assignedTo: null,
+        ...(projectIds?.length ? { projectId: { in: projectIds } } : {}),
+      },
+      include: {
+        project: { select: { id: true, name: true } },
+        creator: {
+          select: { id: true, firstName: true, lastName: true, email: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    })
+  } catch (error) {
+    handleDbError(error, 'getUnassignedTasks')
+  }
+}
+
+export async function getProjectTasks(projectId: string) {
+  try {
+    return await prisma.task.findMany({
+      where: { projectId },
+      include: {
+        project: { select: { id: true, name: true } },
+        creator: {
+          select: { id: true, firstName: true, lastName: true, email: true },
+        },
+        assignee: {
+          select: { id: true, firstName: true, lastName: true, email: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    })
+  } catch (error) {
+    handleDbError(error, 'getProjectTasks')
+  }
+}
+
+export async function getCompanyStats() {
+  try {
+    const [users, projects, tasks, pendingApprovals, departments] =
+      await Promise.all([
+        prisma.user.count({ where: { isActive: true } }),
+        prisma.project.count(),
+        prisma.task.count(),
+        prisma.roleRequest.count({ where: { status: 'pending' } }),
+        prisma.department.count(),
+      ])
+    const completedTasks = await prisma.task.count({
+      where: { status: 'completed' },
+    })
+    return {
+      users,
+      projects,
+      tasks,
+      completedTasks,
+      pendingApprovals,
+      departments,
+      completionRate:
+        tasks > 0 ? Math.round((completedTasks / tasks) * 100) : 0,
+    }
+  } catch (error) {
+    handleDbError(error, 'getCompanyStats')
+  }
+}
+
+export async function getDepartmentStats(departmentId?: string) {
+  try {
+    const where = departmentId ? { departmentId } : {}
+    const users = await prisma.user.count({ where: { ...where, isActive: true } })
+    const projects = await prisma.project.count({
+      where: departmentId ? { departmentId } : {},
+    })
+    const tasks = await prisma.task.count({
+      where: departmentId
+        ? { project: { departmentId } }
+        : {},
+    })
+    return { users, projects, tasks }
+  } catch (error) {
+    handleDbError(error, 'getDepartmentStats')
+  }
+}
+
+export async function addProjectMember(
+  projectId: string,
+  userId: string,
+  role: string
+) {
+  try {
+    return await prisma.projectTeamMember.upsert({
+      where: { projectId_userId: { projectId, userId } },
+      update: { role },
+      create: { projectId, userId, role },
+    })
+  } catch (error) {
+    handleDbError(error, 'addProjectMember')
   }
 }

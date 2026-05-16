@@ -51,7 +51,7 @@ export default function CreateProjectDialog({ userId }: { userId: string }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button gap="2">
+        <Button className="gap-2">
           <Plus size={20} />
           New Project
         </Button>

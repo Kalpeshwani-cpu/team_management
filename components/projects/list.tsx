@@ -1,6 +1,5 @@
 'use client'
 
-import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useSession } from 'next-auth/react'
@@ -12,8 +11,7 @@ export default function ProjectsList({ projects }: { projects: any[] }) {
   const router = useRouter()
   const [loadingId, setLoadingId] = useState<string | null>(null)
 
-  // @ts-ignore
-  const userRole = session?.user?.role || 'user'
+  const userRole = session?.user?.role || session?.user?.primaryRole || 'developer'
   const userId = session?.user?.id
 
   const getStatusColor = (status: string) => {
@@ -60,8 +58,7 @@ export default function ProjectsList({ projects }: { projects: any[] }) {
         const canJoin = userRole === 'developer' && !isMember
 
         return (
-          <Link key={project.id} href={`/dashboard/projects/${project.id}`}>
-            <div className="p-6 bg-card border border-border rounded-lg hover:border-primary hover:shadow-md transition-all cursor-pointer">
+          <div key={project.id} className="p-6 bg-card border border-border rounded-lg hover:border-primary hover:shadow-md transition-all">
               <div className="flex justify-between items-start mb-3">
                 <div>
                   <h3 className="text-lg font-semibold">{project.name}</h3>
@@ -97,8 +94,7 @@ export default function ProjectsList({ projects }: { projects: any[] }) {
                   <span>Due: {new Date(project.endDate).toLocaleDateString()}</span>
                 )}
               </div>
-            </div>
-          </Link>
+          </div>
         )
       })}
     </div>

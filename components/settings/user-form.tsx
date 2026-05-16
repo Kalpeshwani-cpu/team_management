@@ -9,9 +9,8 @@ export default function UserSettingsForm({ user }: { user: any }) {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [formData, setFormData] = useState({
-    firstName: user.profile?.first_name || '',
-    lastName: user.profile?.last_name || '',
-    phone: user.profile?.phone || '',
+    firstName: user.firstName || '',
+    lastName: user.lastName || '',
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -26,9 +25,8 @@ export default function UserSettingsForm({ user }: { user: any }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: user.id,
-          first_name: formData.firstName,
-          last_name: formData.lastName,
-          phone: formData.phone,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
         }),
       })
 
@@ -82,18 +80,6 @@ export default function UserSettingsForm({ user }: { user: any }) {
           value={user.email}
           disabled
           className="bg-muted"
-        />
-      </div>
-
-      <div>
-        <label className="text-sm font-medium block mb-2">Phone</label>
-        <Input
-          value={formData.phone}
-          onChange={(e) =>
-            setFormData({ ...formData, phone: e.target.value })
-          }
-          placeholder="Enter your phone number"
-          type="tel"
         />
       </div>
 

@@ -68,7 +68,9 @@ export async function POST(request: NextRequest) {
       taskId,
       {
         taskId,
-        featureVector: taskFeatures.featureVector,
+        featureVector: Array.isArray(taskFeatures.featureVector)
+          ? (taskFeatures.featureVector as number[])
+          : [],
         complexityScore: taskFeatures.complexityScore,
         requiredSkills: taskFeatures.requiredSkills,
         requiredQualifications: taskFeatures.requiredQualifications,

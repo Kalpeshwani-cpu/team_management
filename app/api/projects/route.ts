@@ -1,5 +1,8 @@
 import { getCurrentUser } from '@/lib/auth'
-import { getProjects, createProject, logActivity } from '@/lib/db'
+import { createProject, logActivity, getAllProjects, addProjectMember } from '@/lib/db'
+import { canCreateProject, canViewAllProjects } from '@/lib/policies'
+import { resolvePrimaryRole } from '@/lib/auth'
+import { getProjectsForRole } from '@/lib/dashboard-data'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 
@@ -20,7 +23,10 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const projects = await getProjects(currentUser.id)
+    const role = resolvePrimaryRole(currentUser)
+    const projects = (await canViewAllProjects(currentUser))
+      ? await getAllProjects()
+      : await getProjectsForRole(currentUser.id, role)
     return NextResponse.json(projects)
   } catch (error: any) {
     console.error('[PROJECTS_GET]', error)
@@ -57,12 +63,30 @@ export async function POST(request: NextRequest) {
 
     const { name, description, departmentId } = validation.data
 
+    if (!(await canCreateProject(currentUser))) {
+      return NextResponse.json(
+        { error: 'You do not have permission to create projects' },
+        { status: 403 }
+      )
+    }
+
     const project = await createProject(
       name,
       currentUser.id,
       description,
       departmentId
     )
+
+    if (project?.id) {
+      const ownerRole = resolvePrimaryRole(currentUser)
+      const memberRole =
+        ownerRole === 'team_lead'
+          ? 'team_lead'
+          : ownerRole === 'developer'
+            ? 'developer'
+            : 'project_lead'
+      await addProjectMember(project.id, currentUser.id, memberRole)
+    }
 
     // Log activity
     await logActivity(

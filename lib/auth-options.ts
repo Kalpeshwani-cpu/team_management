@@ -3,6 +3,16 @@ import CredentialsProvider from "next-auth/providers/credentials"
 import prisma from "./prisma"
 import bcrypt from "bcryptjs"
 import { ensureUserApproved } from "./auto-approve-user"
+import { getPrimaryRole } from "./roles"
+import { ensureBootstrapAdmin } from "./bootstrap-admin"
+
+async function loadUserRoles(userId: string) {
+  const userRoles = await prisma.userRole.findMany({
+    where: { userId },
+    include: { role: true },
+  })
+  return userRoles.map((ur) => ur.role.name)
+}
 
 export const authOptions: NextAuthOptions = {
   // NOTE: PrismaAdapter is intentionally removed.
@@ -51,11 +61,16 @@ export const authOptions: NextAuthOptions = {
           select: { approvalStatus: true },
         })
 
+        const roles = await loadUserRoles(user.id)
+        const primaryRole = getPrimaryRole(roles, user.requestedRole)
+
         return {
           id: user.id,
           email: user.email,
           name: user.name,
           approvalStatus: updatedUser?.approvalStatus ?? 'approved',
+          roles,
+          primaryRole,
         }
       },
     }),
@@ -123,27 +138,57 @@ export const authOptions: NextAuthOptions = {
           select: { approvalStatus: true },
         })
 
+        const roles = await loadUserRoles(user.id)
+        const primaryRole = getPrimaryRole(roles, user.requestedRole)
+
         return {
           id: user.id,
           email: user.email,
           name: user.name || checksumAddress,
           approvalStatus: updatedUser?.approvalStatus ?? 'approved',
+          roles,
+          primaryRole,
         }
       }
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
+    async jwt({ token, user, trigger }) {
+      if (user?.id) {
+        await ensureBootstrapAdmin({
+          id: user.id,
+          email: user.email ?? undefined,
+        })
+        const roles = await loadUserRoles(user.id)
+        const dbUser = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: { requestedRole: true, approvalStatus: true },
+        })
         token.id = user.id
-        token.approvalStatus = (user as any).approvalStatus
+        token.approvalStatus = dbUser?.approvalStatus ?? user.approvalStatus
+        token.roles = roles
+        token.primaryRole = getPrimaryRole(roles, dbUser?.requestedRole)
       }
+
+      if ((trigger === 'update' || !token.roles) && token.id) {
+        const roles = await loadUserRoles(token.id as string)
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { requestedRole: true },
+        })
+        token.roles = roles
+        token.primaryRole = getPrimaryRole(roles, dbUser?.requestedRole)
+      }
+
       return token
     },
     async session({ session, token }) {
       if (token && session.user) {
         session.user.id = token.id as string
-        ;(session.user as any).approvalStatus = token.approvalStatus
+        session.user.approvalStatus = token.approvalStatus as string
+        session.user.roles = (token.roles as string[]) ?? []
+        session.user.primaryRole = token.primaryRole
+        session.user.role = token.primaryRole
       }
       return session
     },

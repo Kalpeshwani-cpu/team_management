@@ -1,53 +1,27 @@
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth-options'
 import prisma from '@/lib/prisma'
-import { redirect } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { BarChart3, TrendingUp, Clock, Target } from 'lucide-react'
+import { requireManagerOrAdmin } from '@/lib/require-role'
 
 export default async function AnalyticsPage() {
-  const session = await getServerSession(authOptions)
+  const { primaryRole } = await requireManagerOrAdmin()
 
-  if (!session?.user?.email) {
-    redirect('/auth/login')
-  }
-
-  // Check user role
-  const userRoles = await prisma.userRole.findMany({
-    where: { userId: session.user.id },
-    include: { role: true }
-  })
-
-  const hasAccess = userRoles.some(ur => ur.role.name === 'admin' || ur.role.name === 'manager')
-
-  if (!hasAccess) {
-    return (
-      <div className="p-6">
-        <h1 className="text-2xl font-bold text-red-500">Access Denied</h1>
-        <p>You do not have permission to view analytics.</p>
-      </div>
-    )
-  }
-
-  const roleName = userRoles.some(ur => ur.role.name === 'admin') ? 'admin' : 'manager'
-
-  // Fetch performance metrics - using tasks to calculate dummy metrics for now
-  // since performance_metrics table doesn't exist in Prisma schema
   const completedTasks = await prisma.task.count({
-    where: { status: 'completed' }
+    where: { status: 'completed' },
   })
-  
+
   const totalTasks = await prisma.task.count()
   const activeProjects = await prisma.project.count()
-  
-  const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
+
+  const completionRate =
+    totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
 
   return (
-    <div className="space-y-6">
+    <div className="p-8 max-w-6xl space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Analytics & Performance</h1>
         <p className="text-muted-foreground mt-2">
-          Team performance metrics and insights ({roleName === 'admin' ? 'Admin View' : 'Manager View'})
+          Team performance metrics ({primaryRole === 'admin' ? 'Admin' : 'Manager'} view)
         </p>
       </div>
 
@@ -110,7 +84,9 @@ export default async function AnalyticsPage() {
           <CardTitle>Monthly Performance Metrics</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground text-center py-8">Historical metrics integration pending...</p>
+          <p className="text-muted-foreground text-center py-8">
+            Historical metrics integration pending…
+          </p>
         </CardContent>
       </Card>
     </div>

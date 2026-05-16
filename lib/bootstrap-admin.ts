@@ -29,15 +29,6 @@ export async function ensureBootstrapAdmin(user: { id: string; email?: string | 
     return
   }
 
-  try {
-    await prisma.userRole.deleteMany({
-      where: { roleId: adminRole.id },
-    })
-  } catch (delErr) {
-    console.error('ensureBootstrapAdmin: failed to clear admin roles', delErr)
-    return
-  }
-
   const userIds = new Set<string>()
   userIds.add(user.id)
 

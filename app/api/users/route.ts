@@ -43,14 +43,27 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    const { userId, ...updates } = await request.json()
+    const body = await request.json()
+    const { userId, first_name, last_name, firstName, lastName, ...rest } = body
 
-    // Users can only update their own profile
     if (userId !== currentUser.id) {
       return NextResponse.json(
         { error: 'Forbidden' },
         { status: 403 }
       )
+    }
+
+    const updates: Record<string, unknown> = { ...rest }
+    if (firstName !== undefined || first_name !== undefined) {
+      updates.firstName = firstName ?? first_name
+    }
+    if (lastName !== undefined || last_name !== undefined) {
+      updates.lastName = lastName ?? last_name
+    }
+    if (updates.firstName !== undefined || updates.lastName !== undefined) {
+      const fn = String(updates.firstName ?? currentUser.firstName ?? '')
+      const ln = String(updates.lastName ?? currentUser.lastName ?? '')
+      updates.name = [fn, ln].filter(Boolean).join(' ') || null
     }
 
     const updatedUser = await updateUser(userId, updates)

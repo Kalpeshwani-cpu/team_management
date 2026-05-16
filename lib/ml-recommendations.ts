@@ -1,4 +1,5 @@
 import prisma from '@/lib/prisma'
+import type { Prisma } from '@prisma/client'
 
 export interface UserVector {
   userId: string
@@ -152,29 +153,33 @@ export async function cacheRecommendations(
   recommendations: RecommendationScore[]
 ): Promise<void> {
   const expiresAt = new Date()
-  expiresAt.setHours(expiresAt.getHours() + 24) // Cache for 24 hours
-  
+  expiresAt.setHours(expiresAt.getHours() + 24)
+
   const cacheData = {
     recommended_users: recommendations,
     recommendation_metadata: {
       totalCandidates: recommendations.length,
       topScore: recommendations[0]?.score || 0,
-      averageScore: recommendations.reduce((sum, r) => sum + r.score, 0) / recommendations.length,
+      averageScore:
+        recommendations.length > 0
+          ? recommendations.reduce((sum, r) => sum + r.score, 0) / recommendations.length
+          : 0,
       generatedAt: new Date().toISOString(),
     },
+    expires_at: expiresAt.toISOString(),
     algorithm_version: 'v1',
   }
+
+  const scoresJson = cacheData as unknown as Prisma.InputJsonValue
 
   await prisma.mLRecommendation.upsert({
     where: { taskId },
     create: {
       taskId,
-      data: cacheData,
-      expiresAt,
+      scores: scoresJson,
     },
     update: {
-      data: cacheData,
-      expiresAt,
+      scores: scoresJson,
     },
   })
 }
@@ -187,13 +192,15 @@ export async function getCachedRecommendations(taskId: string): Promise<Recommen
     where: { taskId },
   })
 
-  if (!recommendation || !recommendation.data) return null
+  if (!recommendation?.scores) return null
 
-  // Check if cache has expired
-  if (recommendation.expiresAt < new Date()) {
+  const data = recommendation.scores as Record<string, unknown>
+  const expiresAt = data.expires_at
+    ? new Date(String(data.expires_at))
+    : null
+  if (expiresAt && expiresAt < new Date()) {
     return null
   }
 
-  const data = recommendation.data as Record<string, any>
-  return data.recommended_users as RecommendationScore[]
+  return (data.recommended_users as RecommendationScore[]) ?? null
 }

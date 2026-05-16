@@ -18,12 +18,10 @@ export default withAuth(
 
 export const config = {
   matcher: [
-    /*
-     * Match all dashboard paths
-     */
     "/dashboard/:path*",
     "/api/admin/:path*",
     "/api/projects/:path*",
     "/api/tasks/:path*",
+    "/api/users/:path*",
   ],
 }
