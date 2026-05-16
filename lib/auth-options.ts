@@ -36,41 +36,46 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
+        try {
+          if (!credentials?.email || !credentials?.password) {
+            return null
+          }
+
+          const user = await prisma.user.findUnique({
+            where: { email: credentials.email },
+          })
+
+          if (!user || !user.password) {
+            return null
+          }
+
+          const isPasswordValid = await bcrypt.compare(credentials.password, user.password)
+          
+          if (!isPasswordValid) {
+            return null
+          }
+
+          await ensureUserApproved(user.id)
+
+          const updatedUser = await prisma.user.findUnique({
+            where: { id: user.id },
+            select: { approvalStatus: true },
+          })
+
+          const roles = await loadUserRoles(user.id)
+          const primaryRole = getPrimaryRole(roles, user.requestedRole)
+
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            approvalStatus: updatedUser?.approvalStatus ?? 'approved',
+            roles,
+            primaryRole,
+          }
+        } catch (error) {
+          console.error("Authorize Error:", error)
           return null
-        }
-
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
-        })
-
-        if (!user || !user.password) {
-          return null
-        }
-
-        const isPasswordValid = await bcrypt.compare(credentials.password, user.password)
-        
-        if (!isPasswordValid) {
-          return null
-        }
-
-        await ensureUserApproved(user.id)
-
-        const updatedUser = await prisma.user.findUnique({
-          where: { id: user.id },
-          select: { approvalStatus: true },
-        })
-
-        const roles = await loadUserRoles(user.id)
-        const primaryRole = getPrimaryRole(roles, user.requestedRole)
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          approvalStatus: updatedUser?.approvalStatus ?? 'approved',
-          roles,
-          primaryRole,
         }
       },
     }),
@@ -155,35 +160,51 @@ export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
     async jwt({ token, user, trigger }) {
-      if (user?.id) {
-        await ensureBootstrapAdmin({
-          id: user.id,
-          email: user.email ?? undefined,
-        })
-        const roles = await loadUserRoles(user.id)
-        const dbUser = await prisma.user.findUnique({
-          where: { id: user.id },
-          select: { requestedRole: true, approvalStatus: true },
-        })
-        token.id = user.id
-        token.email = user.email
-        token.name = user.name
-        token.approvalStatus = dbUser?.approvalStatus ?? user.approvalStatus
-        token.roles = roles
-        token.primaryRole = getPrimaryRole(roles, dbUser?.requestedRole)
-      }
+      try {
+        if (user) {
+          // On sign-in, populate the token with all user info
+          token.id = user.id
+          token.email = user.email
+          token.name = user.name
+          token.approvalStatus = user.approvalStatus
+          token.roles = user.roles
+          token.primaryRole = user.primaryRole
 
-      if ((trigger === 'update' || !token.roles) && token.id) {
-        const roles = await loadUserRoles(token.id as string)
-        const dbUser = await prisma.user.findUnique({
-          where: { id: token.id as string },
-          select: { requestedRole: true },
-        })
-        token.roles = roles
-        token.primaryRole = getPrimaryRole(roles, dbUser?.requestedRole)
-      }
+          // Run bootstrap logic only once on sign-in
+          await ensureBootstrapAdmin({
+            id: user.id,
+            email: user.email ?? undefined,
+          })
+          
+          // Re-fetch only if bootstrap might have changed roles
+          const roles = await loadUserRoles(user.id)
+          const dbUser = await prisma.user.findUnique({
+            where: { id: user.id },
+            select: { requestedRole: true, approvalStatus: true },
+          })
+          
+          token.approvalStatus = dbUser?.approvalStatus ?? token.approvalStatus
+          token.roles = roles
+          token.primaryRole = getPrimaryRole(roles, dbUser?.requestedRole)
+        }
 
-      return token
+        // On updates or if roles are missing for some reason
+        if ((trigger === 'update' || !token.roles) && token.id) {
+          const roles = await loadUserRoles(token.id as string)
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.id as string },
+            select: { requestedRole: true, approvalStatus: true },
+          })
+          token.roles = roles
+          token.primaryRole = getPrimaryRole(roles, dbUser?.requestedRole)
+          token.approvalStatus = dbUser?.approvalStatus ?? token.approvalStatus
+        }
+
+        return token
+      } catch (error) {
+        console.error("JWT Callback Error:", error)
+        return token // Still return token to avoid complete failure
+      }
     },
     async session({ session, token }) {
       if (token && session.user) {
